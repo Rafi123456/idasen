@@ -7,26 +7,30 @@ const MOVE_CHARACTERISTI_CUUID = "99fa0002-338a-1024-8a49-009c0215f78a";
 const DPG_SERVICE_UUID = '99fa0010-338a-1024-8a49-009c0215f78a'
 const DPG_CHARACTERISTIC_UUID = '99fa0011-338a-1024-8a49-009c0215f78a'
 
-const DESK_NAME = 'Desk 0472';
+const DESK_NAME_PREFIX = 'Desk';
+const HEIGHT_ERROR = 1.0;
+const MIN_DESK_HEIGHT = 6200;
+const TIMER_INTERVAL_MS = 200;
 
 class Desk {
 
-    myDevice;
-    server;
+    bluetoothDevice;
+    gattServer;
 
     heightCharacteristic;
     moveCharacteristic;
     dpgCharacteristic;
 
-    memory1;
-    memory2;
-    memory3;
+    deskMemory1;
+    deskMemory2;
+    deskMemory3;
 
-    height;
+    heightCm;
     destinationHeight;
-    destinationDirection;
+    destinationDirectionUp;
 
     updateHeightCallback;
+    updateInfoCallback;
 
     timerMove;
 
@@ -35,63 +39,72 @@ class Desk {
             await this.requestBluetoothDevice();
             await this.initServices();            
         } catch(error) {
-            console.log('Argh! ' + error);
+            console.log('Error! ' + error);
             throw error;
         }  
     }
-
 
     async initServices() {          
         await this.connectToGattServer();
         await this.initHeightCharacteristic();
         await this.initMoveCharacteristic();
         await this.initDpkgCharacteristic(); 
+        this.setInfo("Connected.");
     }
 
     async initDpkgCharacteristic() {          
-        const dpkgService = await this.server.getPrimaryService(DPG_SERVICE_UUID);
+        const dpkgService = await this.gattServer.getPrimaryService(DPG_SERVICE_UUID);
         this.dpgCharacteristic = await dpkgService.getCharacteristic(DPG_CHARACTERISTIC_UUID);
     }
 
     async initMoveCharacteristic() {          
-        const moveService = await this.server.getPrimaryService(MOVE_SERVICE_UUID);
+        const moveService = await this.gattServer.getPrimaryService(MOVE_SERVICE_UUID);
         this.moveCharacteristic = await moveService.getCharacteristic(MOVE_CHARACTERISTI_CUUID);
     }
     
     async connectToGattServer() {          
-        this.server = await this.myDevice.gatt.connect();
+        this.gattServer = await this.bluetoothDevice.gatt.connect();
     }
 
-
     async initHeightCharacteristic() {          
-        const heightService = await this.server.getPrimaryService(HEIGHT_SERVICE_UUID);        
+        const heightService = await this.gattServer.getPrimaryService(HEIGHT_SERVICE_UUID);        
         this.heightCharacteristic = await heightService.getCharacteristic(HEIGHT_CHARACTERISTIC_UUID);
         await this.heightCharacteristic.startNotifications();
-        this.heightCharacteristic.addEventListener('characteristicvaluechanged', (event) => { this.handleHeightNotifications(event);});
+        this.heightCharacteristic.addEventListener('characteristicvaluechanged', (event) => { this.handleHeightNotifications(event); });
+        await this.triggerHeightNotificationsEvent();         
+    }
 
-        await this.heightCharacteristic.readValue(); //trigger event 
+    async triggerHeightNotificationsEvent() {
+        let value = await this.heightCharacteristic.readValue();
+        this.destinationHeight = this.convertToHeightCm(value.getUint8(1), value.getUint8(0));
+        console.log(this.destinationHeight);
     }
 
     async requestBluetoothDevice() {    
-        console.log('Requesting Bluetooth Device...');     
-        this.myDevice = await navigator.bluetooth.requestDevice({
-            filters: [{name: DESK_NAME}],
+        this.bluetoothDevice = await navigator.bluetooth.requestDevice({
+            filters: [{namePrefix: DESK_NAME_PREFIX}],
             optionalServices: [HEIGHT_SERVICE_UUID, MOVE_SERVICE_UUID, DPG_SERVICE_UUID]    
         });
     }
 
-    handleHeightNotifications(event) {   
+    async handleHeightNotifications(event) {   
         let value = event.target.value;  
-        this.height = (value.getUint8(1) * 256 + value.getUint8(0) + 6200) / 100.0;
+        this.heightCm = this.convertToHeightCm(value.getUint8(1), value.getUint8(0));  
+
+        if(this.shouldStop()) {
+            this.stop(); 
+            this.stopCommand();                      
+        }  
+
         if(this.updateHeightCallback) {
             this.updateHeightCallback();
         }        
     }
 
     async readMemories() {
-        this.memory1 = await this.readMemory(137);        
-        this.memory2 = await this.readMemory(138);
-        this.memory3 = await this.readMemory(139);        
+        this.deskMemory1 = await this.readMemory(137);        
+        this.deskMemory2 = await this.readMemory(138);
+        this.deskMemory3 = await this.readMemory(139);        
     }
 
     async readMemory(number) {
@@ -100,32 +113,32 @@ class Desk {
         uint8[1] = number;
         uint8[2] = 0x00;
         await this.dpgCharacteristic.writeValueWithResponse(uint8);  
-        let value = await this.dpgCharacteristic.readValue();        
-        return this.convertToHeightCm(value);
-   
+        let value = await this.dpgCharacteristic.readValue();      
+        return this.convertToHeightCm(value.getUint8(4), value.getUint8(3));          
     }
 
-    convertToHeightCm(value) {
-        return (value.getUint8(4) * 256 + value.getUint8(3) + 6200) / 100.0;
+    convertToHeightCm(upperByte, lowerByte) {
+        return (upperByte * 256 + lowerByte + MIN_DESK_HEIGHT) / 100.0;
     }
 
     setDestinationHeight(dest) {
         this.destinationHeight = dest;  
-        if(this.destinationHeight > this.height ) {
-            this.destinationDirection = 1;
+        if(this.destinationHeight > this.heightCm ) {
+            this.destinationDirectionUp = true;
         } else {
-            this.destinationDirection = 0;
+            this.destinationDirectionUp = false;
         }
     }
 
     async moveDesk(height) {        
-        if( isNaN(height))
-            return;  
-        clearInterval(this.timerMove);
+        if(isNaN(height)) {
+            this.stop();
+            return;             
+        }           
+        
         this.setDestinationHeight(height);  
-        this.timerMove = setInterval(() => { this.timerCallback(); }, 300);        
-    }
-    
+        this.timerMove = setInterval(() => { this.timerCallback(); }, TIMER_INTERVAL_MS);        
+    }    
 
     async up() {
         const order = new Uint8Array(2);
@@ -141,46 +154,69 @@ class Desk {
         await this.moveCharacteristic.writeValue(order); 
     }
 
-    async stop() {
-        clearInterval(this.timerMove);
-        const order = new Uint8Array(2);
+    stop() {
+        if(this.timerMove) {
+            clearInterval(this.timerMove);
+            this.timerMove = null;
+            this.setInfo("Stopped.");
+        }
+    }
+
+    async stopCommand() {
+		const order = new Uint8Array(2);
         order[0] = 0xFF;
-        order[1] = 0x00;
-        await this.moveCharacteristic.writeValue(order); 
+        order[1] = 0x00;   
+		try {              
+			await this.moveCharacteristic.writeValue(order); 
+        } catch(error) {
+            // Ignorig errors! 
+            console.log('Argh! ' + error);            
+        }             
     }
 
     disconnect() {
-        if (this.myDevice) {
-            this.myDevice.gatt.disconnect();  
-            this.myDevice = null;          
+        if (this.bluetoothDevice) {
+            this.bluetoothDevice.gatt.disconnect();  
+            this.bluetoothDevice = null;          
         }
     }
 
     async timerCallback() { 
-        if(this.shouldStop()) { 
-            await this.stop();
-            console.log('Stop ');
-            return;
-        }   
+        console.log("Timer Tick " + new Date().toLocaleTimeString());
 
-        if(this.destinationDirection == 1) { //  up
+        if(this.shouldStop()) { 
+            this.stop();
+            return;
+        }
+        
+        this.setInfo("Moving ...");
+
+        if(this.destinationDirectionUp == true) {
+            console.log("up");
           await this.up();
         } else {
-          await this.down(); 
+            console.log("down");
+            await this.down(); 
         }
     }
 
     shouldStop() {        
-        if(this.destinationDirection == 1) { //  up            
-            if( this.height >= this.destinationHeight - 0.8) {                   
+        if(this.destinationDirectionUp == true) {           
+            if( this.heightCm >= this.destinationHeight - HEIGHT_ERROR ) {           
                 return true;     
             } 
         } else {            
-            if( this.height <= this.destinationHeight  + 0.8) {
+            if( this.heightCm <= this.destinationHeight + HEIGHT_ERROR) {
               return true;    
             }       
         }
         return false;
     }
 
+    setInfo(text) {
+        this.info = new Date().toLocaleTimeString('en-GB') + " " + text;
+        if(this.updateInfoCallback) {
+            this.updateInfoCallback();
+        }
+    }
 }

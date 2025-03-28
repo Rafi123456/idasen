@@ -1,5 +1,6 @@
 var desk = new Desk();
 desk.updateHeightCallback = updateHeight;
+desk.updateInfoCallback =  updateHInfo;
     
 async function initDesk() {
     await desk.init();
@@ -9,7 +10,12 @@ async function initDesk() {
 
 function updateHeight() {
     const div = document.getElementById("height");  
-    div.innerHTML = "" + this.height;
+    div.innerHTML = "" + desk.heightCm;
+}
+
+function updateHInfo() {
+    const div = document.getElementById("info");  
+    div.innerHTML = "" + desk.info;
 }
 
 async function stand() {
@@ -38,26 +44,26 @@ async function pressed(fieldId) {
 }
 
 async function m1() {
-    await this.moveDesk(desk.memory1);  
+    await desk.moveDesk(desk.deskMemory1);  
 }
     
 async function m2() {
-    await this.moveDesk(desk.memory2);  
+    await desk.moveDesk(desk.deskMemory2);  
 }
 
 async function m3() {
-    await this.moveDesk(desk.memory3);  
+    await desk.moveDesk(desk.deskMemory3);  
 }
 
 function setMemoriesUi() {
     let div = document.getElementById("m1");  
-    div.innerHTML = "" + desk.memory1;
+    div.innerHTML = "" + desk.deskMemory1;
 
     div = document.getElementById("m2");      
-    div.innerHTML = "" + desk.memory2;
+    div.innerHTML = "" + desk.deskMemory2;
 
     div = document.getElementById("m3");  
-    div.innerHTML = "" + desk.memory3;
+    div.innerHTML = "" + desk.deskMemory3;
 }
 
 function clearMemoriesUi() {
