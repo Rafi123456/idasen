@@ -21,18 +21,22 @@ class Desk {
     moveCharacteristic;
     dpgCharacteristic;
 
-    deskMemory1;
-    deskMemory2;
-    deskMemory3;
+    deskMemory1 = 0;
+    deskMemory2 = 0;
+    deskMemory3 = 0;
 
-    heightCm;
-    destinationHeight;
-    destinationDirectionUp;
+    heightCm = 0;
+    destinationHeight = 0;
+    destinationDirectionUp = true;
 
     updateHeightCallback;
     updateInfoCallback;
 
     timerMove;
+
+    constructor() {
+        // this.destinationHeight = 0;
+    }
 
     async init() {
         try {              
@@ -71,13 +75,13 @@ class Desk {
         this.heightCharacteristic = await heightService.getCharacteristic(HEIGHT_CHARACTERISTIC_UUID);
         await this.heightCharacteristic.startNotifications();
         this.heightCharacteristic.addEventListener('characteristicvaluechanged', (event) => { this.handleHeightNotifications(event); });
-        await this.triggerHeightNotificationsEvent();         
+        await this.getCurrentHeight();         
     }
 
-    async triggerHeightNotificationsEvent() {
+    async getCurrentHeight() {
         let value = await this.heightCharacteristic.readValue();
-        this.destinationHeight = this.convertToHeightCm(value.getUint8(1), value.getUint8(0));
-        console.log(this.destinationHeight);
+        this.heightCm = this.convertToHeightCm(value.getUint8(1), value.getUint8(0));  
+        this.destinationHeight = this.heightCm;      
     }
 
     async requestBluetoothDevice() {    
@@ -91,7 +95,7 @@ class Desk {
         let value = event.target.value;  
         this.heightCm = this.convertToHeightCm(value.getUint8(1), value.getUint8(0));  
 
-        if(this.shouldStop()) {
+        if(this.weControlDesk() && this.shouldStop()) {
             this.stop(); 
             this.stopCommand();                      
         }  
@@ -163,10 +167,11 @@ class Desk {
     }
 
     async stopCommand() {
+        console.log("stop");
 		const order = new Uint8Array(2);
         order[0] = 0xFF;
         order[1] = 0x00;   
-		try {              
+		try {          
 			await this.moveCharacteristic.writeValue(order); 
         } catch(error) {
             // Ignorig errors! 
@@ -182,25 +187,21 @@ class Desk {
     }
 
     async timerCallback() { 
-        console.log("Timer Tick " + new Date().toLocaleTimeString());
-
         if(this.shouldStop()) { 
             this.stop();
             return;
         }
-        
+
         this.setInfo("Moving ...");
 
         if(this.destinationDirectionUp == true) {
-            console.log("up");
-          await this.up();
+            await this.up();
         } else {
-            console.log("down");
             await this.down(); 
         }
     }
 
-    shouldStop() {        
+    shouldStop() {       
         if(this.destinationDirectionUp == true) {           
             if( this.heightCm >= this.destinationHeight - HEIGHT_ERROR ) {           
                 return true;     
@@ -211,6 +212,10 @@ class Desk {
             }       
         }
         return false;
+    }
+
+    weControlDesk() {  
+        return  this.timerMove ? true : false;        
     }
 
     setInfo(text) {
