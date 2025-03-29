@@ -217,7 +217,7 @@ class Desk {
 
     #shouldStop() {       
         if(this.#destinationDirectionUp == true) {           
-            if( this.#heightCm >= this.#destinationHeight - HEIGHT_ERROR ) {           
+            if( this.#heightCm >= this.#destinationHeight - HEIGHT_ERROR) {           
                 return true;     
             } 
         } else {            
@@ -233,7 +233,10 @@ class Desk {
     }
 
     #setInfo(text) {
-        this.info = new Date().toLocaleTimeString('en-GB') + " " + text;
+        const date = new Date();
+        const time = date.toLocaleTimeString('en-GB') + `.${date.getMilliseconds()}`;
+        //this.info = new Date().toLocaleTimeString('en-GB') + " " + text;
+        this.info = time + " " + text;
         if(this.#updateInfoCallback) {
             this.#updateInfoCallback();
         }

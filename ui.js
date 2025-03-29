@@ -57,23 +57,23 @@ async function m3() {
 
 function setMemoriesUi() {
     let div = document.getElementById("m1");    
-    div.innerHTML = "" + desk.getHeightMemory(1);
+    div.value = "" + desk.getHeightMemory(1);
 
 
     div = document.getElementById("m2");      
-    div.innerHTML = "" + desk.getHeightMemory(2);
+    div.value = "" + desk.getHeightMemory(2);
 
     div = document.getElementById("m3");  
-    div.innerHTML = "" + desk.getHeightMemory(3);
+    div.value = "" + desk.getHeightMemory(3);
 }
 
 function clearMemoriesUi() {
     let div = document.getElementById("m1");  
-    div.innerHTML = "";
+    div.value = "";
 
     div = document.getElementById("m2");      
-    div.innerHTML = "";
+    div.value = "";
 
     div = document.getElementById("m3");  
-    div.innerHTML = "";
+    div.value = "";
 }

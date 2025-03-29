@@ -2,49 +2,55 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
-    <script type="text/javascript" src="desk.js">
-    </script>
-
-    <script type="text/javascript" src="ui.js">
-    </script>
-      
+    <script type="text/javascript" src="desk.js"></script>
+    <script type="text/javascript" src="ui.js"></script>
+    <style>
+      .grid-container {
+        display: grid;
+        grid-template-columns: auto auto auto;
+        gap: 10px;
+        max-width: 600px;
+      }
+      #height {
+        grid-column: 2 / span 2;
+      }
+      #info {
+        grid-column: 2 / span 2;
+      }
+      .memory{
+        grid-column: 2 / span 1;
+      }
+    </style>      
     <title>Desk</title>
   </head>
   <body>
-    <button onClick='initDesk()'>connect</button>	
-    <button onClick='desk.disconnect()'>disconnect</button>    
-    <button onClick='desk.stop()'>stop</button> <br><br>      
+    <div class="grid-container">
+      <button onClick='initDesk()'>connect</button>	
+      <button onClick='desk.disconnect()'>disconnect</button>    
+      <button onClick='desk.stop()'>stop</button>
+      Height: <label id="height"></label>
 
-    
+      <label for="sit">Sit Lo: </label>
+      <input type="text" id="sitL" name="sit" value="78">
+      <button onClick='sitL()'>Sit L</button>
 
-    Height: <label id="height"></label>
-    <br><br>
+      <label for="sit">Sit Hi: </label>
+      <input type="text" id="sitH" name="sit" value="112">
+      <button onClick='sitH()'>Sit H</button>
 
-    <label for="sit">Sit Lo: </label>
-    <input type="text" id="sitL" name="sit" value="78">
-    <button onClick='sitL()'>Sit L</button> <br><br>
-	
-	<label for="sit">Sit Hi: </label>
-    <input type="text" id="sitH" name="sit" value="112">
-    <button onClick='sitH()'>Sit H</button> <br><br>
+      <label for="stand">Stand: </label>
+      <input type="text" id="stand" name="stand" value="120"> 
+      <button onClick='stand()'>Stand</button>
 
-    <label for="stand">Stand: </label>
-    <input type="text" id="stand" name="stand" value="120"> 
-    <button onClick='stand()'>Stand</button> <br><br>
+      <label for="max">Max:</label>
+      <input type="text" id="max" name="max" value="127"> 
+      <button onClick='max()'>Max</button>
 
-    <label for="max">Max:</label>
-    <input type="text" id="max" name="max" value="127"> 
-	<button onClick='max()'>Max</button> <br><br>
-	
-	<button onClick='m1()'>Memory 1 </button> <label id="m1"></label>
-  <br><br>
-  <button onClick='m2()'>Memory 2</button> <label id="m2"></label>
-  <br><br>
-  <button onClick='m3()'>Memory 3</button> <label id="m3"></label>
-  <br><br>
+      <input id="m1" class="memory" disabled></input> <button onClick='m1()' >Memory 1 </button>
+      <input id="m2" class="memory" disabled></input> <button onClick='m2()'>Memory 2</button> 
+      <input id="m3" class="memory" disabled></input> <button onClick='m3()'>Memory 3</button> 
 
-  Info: <label id="info"></label>
-  <br><br>
-
+      Info: <label id="info"></label>
+	  </div>
   </body>
 </html>
