@@ -10,7 +10,8 @@ const DPG_CHARACTERISTIC_UUID = '99fa0011-338a-1024-8a49-009c0215f78a'
 const DESK_NAME_PREFIX = 'Desk';
 const HEIGHT_ERROR = 1.0;
 const MIN_DESK_HEIGHT = 6200;
-const TIMER_INTERVAL_MS = 200;
+const TIMER_INTERVAL_MS = 700;
+const REPEAT_COUNTER = 10;
 
 class Desk {
 
@@ -44,6 +45,10 @@ class Desk {
 
     set infoCallback(callback) {
         this.#updateInfoCallback = callback;
+    }
+
+    get isConnected() {
+        return this.#bluetoothDevice == null;
     }
 
     getHeightMemory(number) {
@@ -80,17 +85,29 @@ class Desk {
         }
     }
 
-    async stopCommand() {
+    async #stopCommand() {
         console.log("stop");
 		const order = new Uint8Array(2);
         order[0] = 0xFF;
-        order[1] = 0x00;   
-		try {          
-			await this.#moveCharacteristic.writeValue(order); 
-        } catch(error) {
-            // Ignorig errors! 
-            console.log('Argh! ' + error);            
-        }             
+        order[1] = 0x00;		
+		await this.#moveCharacteristic.writeValue(order);                     
+    }
+
+    async #stopCommandWitRepeat() {
+        for(let i = 0; i < REPEAT_COUNTER; i++) {
+            try {          
+                await this.#stopCommand();
+                break;
+            } catch(error) {
+                // Ignorig errors! 
+                console.log('Argh! ' + error);
+                await this.#sleep(50);            
+            } 
+        }            
+    }
+
+    async #sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     disconnect() {
@@ -158,7 +175,7 @@ class Desk {
 
         if(this.#weControlDesk() && this.#shouldStop()) {
             this.stop(); 
-            this.stopCommand();                      
+            this.#stopCommandWitRepeat();                      
         }  
 
         if(this.#updateHeightCallback) {

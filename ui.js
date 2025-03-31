@@ -1,11 +1,25 @@
 var desk = new Desk();
 desk.heightCallback = updateHeight;
 desk.infoCallback =  updateHInfo;
+ 
 
     
-async function initDesk() {
-    await desk.init();    
+async function initDesk() {    
+    await desk.init();
+    disableUi(false);  
     setMemoriesUi();
+}
+
+function stop() {    
+    desk.stop();         
+}
+
+
+
+function disconnect() {
+    desk.stop();     
+    desk.disconnect();
+    disableUi(true);     
 }
 
 function updateHeight() {
@@ -53,6 +67,24 @@ async function m2() {
 
 async function m3() {
     await desk.moveDesk(desk.getHeightMemory(3));  
+}
+
+function disableUi(disabled) {
+    document.getElementById("bdisconnect").disabled = disabled;
+    document.getElementById("bstop").disabled = disabled;
+
+    document.getElementById("bsitL").disabled = disabled;
+    document.getElementById("bsitH").disabled = disabled;
+    document.getElementById("bstand").disabled = disabled;
+
+    document.getElementById("bmax").disabled = disabled;
+
+    document.getElementById("bm1").disabled = disabled;
+    document.getElementById("bm2").disabled = disabled;
+    document.getElementById("bm3").disabled = disabled;
+
+    
+
 }
 
 function setMemoriesUi() {
