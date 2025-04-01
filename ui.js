@@ -19,7 +19,8 @@ function stop() {
 function disconnect() {
     desk.stop();     
     desk.disconnect();
-    disableUi(true);     
+    disableUi(true);
+    clearUi();
 }
 
 function updateHeight() {
@@ -82,9 +83,15 @@ function disableUi(disabled) {
     document.getElementById("bm1").disabled = disabled;
     document.getElementById("bm2").disabled = disabled;
     document.getElementById("bm3").disabled = disabled;
+}
 
-    
+function clearUi() {
+    document.getElementById("height").innerHTML = "";
+    document.getElementById("info").innerHTML = "";
 
+    document.getElementById("m1").value = "";
+    document.getElementById("m2").value = "";
+    document.getElementById("m3").value = "";
 }
 
 function setMemoriesUi() {
